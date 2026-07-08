@@ -8,8 +8,9 @@ from urllib.parse import urlparse
 
 from sqlmodel import select
 
-from ephemera.database.models import Endpoint, RequestLog, Target, TimelineEvent
+from ephemera.database.models import Endpoint, RequestLog, Target, TimelineEvent, Variable
 from ephemera.database.session import get_session
+from ephemera.extractor.builtin import extract_from_json_body
 
 
 def get_or_create_target(session, hostname: str) -> Target:
@@ -70,6 +71,38 @@ def record_request(url: str, method: str, status_code: int, response_bytes: int)
                 target_id=target.id,
                 event_type="ENDPOINT_DISCOVERED",
                 description=f"New endpoint: {method} {path}",
+            ))
+
+        session.commit()
+
+
+def record_extracted_variables(url: str, response_body: bytes) -> None:
+    """Called by the proxy addon after record_request(). Runs extraction
+    against the response body and stores any matches as Variable rows,
+    scoped to this URL's target."""
+    hostname = urlparse(url).netloc
+    candidates = extract_from_json_body(response_body)
+
+    if not candidates:
+        return
+
+    with get_session() as session:
+        target = session.exec(select(Target).where(Target.hostname == hostname)).first()
+        if not target:
+            return
+
+        for candidate in candidates:
+            session.add(Variable(
+                target_id=target.id,
+                variable_type=candidate.variable_type,
+                key=candidate.key,
+                value=candidate.value,
+                source_url=url,
+            ))
+            session.add(TimelineEvent(
+                target_id=target.id,
+                event_type="VARIABLE_EXTRACTED",
+                description=f"Extracted '{candidate.key}' from {url}",
             ))
 
         session.commit()

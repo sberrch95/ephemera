@@ -46,3 +46,12 @@ class TimelineEvent(SQLModel, table=True):
     event_type: str
     description: str
     timestamp: datetime = Field(default_factory=utcnow)
+
+class Variable(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    target_id: int = Field(foreign_key="target.id", index=True)
+    variable_type: str = Field(index=True)
+    key: str
+    value: str
+    source_url: str
+    extracted_at: datetime = Field(default_factory=utcnow)
