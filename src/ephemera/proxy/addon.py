@@ -1,13 +1,13 @@
 """Ephemera's core mitmproxy addon.
 
-Intercepts HTTP(S) traffic. On each completed response: logs it, stores
-it via the memory layer, and runs extraction against the response body
-to capture any security-relevant values (tokens, session IDs, etc.).
+Intercepts HTTP(S) traffic. On each completed response: logs it, opens
+a database session, and stores + extracts through the memory layer.
 """
 
 from mitmproxy import http
 
 from ephemera.core.memory import record_extracted_variables, record_request
+from ephemera.database.session import get_session
 
 
 class EphemeraAddon:
@@ -24,15 +24,18 @@ class EphemeraAddon:
         length = len(content) if content else 0
         print(f"[RESPONSE] {status} {flow.request.pretty_url} ({length} bytes)")
 
-        record_request(
-            url=flow.request.pretty_url,
-            method=flow.request.method,
-            status_code=status,
-            response_bytes=length,
-        )
-
-        if content:
-            record_extracted_variables(url=flow.request.pretty_url, response_body=content)
+        with get_session() as session:
+            record_request(
+                session=session,
+                url=flow.request.pretty_url,
+                method=flow.request.method,
+                status_code=status,
+                response_bytes=length,
+            )
+            if content:
+                record_extracted_variables(
+                    session=session, url=flow.request.pretty_url, response_body=content
+                )
 
 
 addons = [EphemeraAddon()]
