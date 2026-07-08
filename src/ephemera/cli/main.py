@@ -1,8 +1,9 @@
 """Ephemera CLI entry point."""
-
+import json
+from datetime import datetime
 import typer
 from sqlmodel import select
-
+from ephemera.database.models import Endpoint, Target, TimelineEvent, Variable
 from ephemera.database.models import Endpoint, Target, TimelineEvent
 from ephemera.database.session import get_session, init_db
 from ephemera.proxy.runner import run as run_proxy
@@ -76,6 +77,81 @@ def history(target: str = typer.Option(None, help="Filter by hostname")):
             ts = event.timestamp.strftime("%H:%M:%S")
             typer.echo(f"{ts}  [{event.event_type}]  {event.description}")
 
+@app.command()
+def export(
+    target: str = typer.Argument(..., help="Hostname to export (e.g. localhost:3000)"),
+    format: str = typer.Option("json", help="Output format: json or markdown"),
+):
+    """Export everything known about a target."""
+    with get_session() as session:
+        target_row = session.exec(select(Target).where(Target.hostname == target)).first()
+        if not target_row:
+            typer.echo(f"No data found for target '{target}'.")
+            raise typer.Exit(code=1)
 
+        endpoints = session.exec(
+            select(Endpoint).where(Endpoint.target_id == target_row.id)
+        ).all()
+        variables = session.exec(
+            select(Variable).where(Variable.target_id == target_row.id)
+        ).all()
+        events = session.exec(
+            select(TimelineEvent)
+            .where(TimelineEvent.target_id == target_row.id)
+            .order_by(TimelineEvent.timestamp)
+        ).all()
+
+        if format == "json":
+            data = {
+                "target": target_row.hostname,
+                "first_seen": target_row.first_seen.isoformat(),
+                "last_seen": target_row.last_seen.isoformat(),
+                "endpoints": [
+                    {"method": e.method, "path": e.path, "times_seen": e.times_seen}
+                    for e in endpoints
+                ],
+                "variables": [
+                    {
+                        "type": v.variable_type,
+                        "key": v.key,
+                        "value": v.value,
+                        "source_url": v.source_url,
+                        "extracted_at": v.extracted_at.isoformat(),
+                    }
+                    for v in variables
+                ],
+                "timeline": [
+                    {
+                        "timestamp": ev.timestamp.isoformat(),
+                        "event_type": ev.event_type,
+                        "description": ev.description,
+                    }
+                    for ev in events
+                ],
+            }
+            typer.echo(json.dumps(data, indent=2))
+
+        elif format == "markdown":
+            typer.echo(f"# Ephemera Export: {target_row.hostname}\n")
+            typer.echo(f"First seen: {target_row.first_seen}  ")
+            typer.echo(f"Last seen: {target_row.last_seen}\n")
+
+            typer.echo(f"## Endpoints ({len(endpoints)})\n")
+            for e in endpoints:
+                typer.echo(f"- `{e.method} {e.path}` — seen {e.times_seen}x")
+
+            typer.echo(f"\n## Extracted Variables ({len(variables)})\n")
+            for v in variables:
+                typer.echo(f"- **{v.key}** (`{v.variable_type}`): `{v.value[:50]}...`")
+                typer.echo(f"  - source: {v.source_url}")
+
+            typer.echo(f"\n## Timeline ({len(events)})\n")
+            for ev in events:
+                ts = ev.timestamp.strftime("%H:%M:%S")
+                typer.echo(f"- `{ts}` **[{ev.event_type}]** {ev.description}")
+
+        else:
+            typer.echo(f"Unknown format '{format}'. Use 'json' or 'markdown'.")
+            raise typer.Exit(code=1)
 if __name__ == "__main__":
     app()
