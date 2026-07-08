@@ -1,10 +1,8 @@
 """Ephemera CLI entry point."""
 import json
-from datetime import datetime
 import typer
 from sqlmodel import select
 from ephemera.database.models import Endpoint, Target, TimelineEvent, Variable
-from ephemera.database.models import Endpoint, Target, TimelineEvent
 from ephemera.database.session import get_session, init_db
 from ephemera.proxy.runner import run as run_proxy
 
@@ -27,7 +25,7 @@ def start(port: int = 8888):
     init_db()
     typer.echo(f"Starting Ephemera proxy on port {port}...")
     typer.echo(f"Configure your tools to use proxy: http://localhost:{port}")
-    typer.echo(f"Trust the CA cert at: ~/.mitmproxy/mitmproxy-ca-cert.pem")
+    typer.echo("Trust the CA cert at: ~/.mitmproxy/mitmproxy-ca-cert.pem")
     run_proxy(listen_port=port)
 
 
