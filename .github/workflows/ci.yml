@@ -18,8 +18,14 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
+      - name: Create virtual environment
+        run: uv venv --python 3.12
+
+      - name: Add venv to PATH
+        run: echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
       - name: Install dependencies
-        run: uv pip install --system -e ".[dev]"
+        run: uv pip install -e ".[dev]"
 
       - name: Run tests
         run: pytest -v
