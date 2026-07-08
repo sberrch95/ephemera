@@ -1,16 +1,18 @@
 """Ephemera's core mitmproxy addon.
 
-This is the interception layer: mitmproxy calls request() and response()
-on this class at the right points in the HTTP(S) lifecycle. For Phase 1,
-we only observe and log — no storage, no extraction, no modification.
-That comes in Phase 2+.
+Intercepts HTTP(S) traffic and, on each completed response, hands it to
+the memory layer (core/memory.py) for storage. The addon itself stays
+"dumb" - it doesn't know about SQL or scoping rules, it just reports
+what it saw.
 """
 
 from mitmproxy import http
 
+from ephemera.core.memory import record_request
+
 
 class EphemeraAddon:
-    """mitmproxy addon: logs every request/response passing through."""
+    """mitmproxy addon: logs and stores every request/response passing through."""
 
     def request(self, flow: http.HTTPFlow) -> None:
         """Called when a request arrives, before it's forwarded to the target."""
@@ -21,6 +23,13 @@ class EphemeraAddon:
         status = flow.response.status_code
         length = len(flow.response.content) if flow.response.content else 0
         print(f"[RESPONSE] {status} {flow.request.pretty_url} ({length} bytes)")
+
+        record_request(
+            url=flow.request.pretty_url,
+            method=flow.request.method,
+            status_code=status,
+            response_bytes=length,
+        )
 
 
 addons = [EphemeraAddon()]
