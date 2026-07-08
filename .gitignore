@@ -25,3 +25,7 @@ ephemera_data/
 
 # OS
 .DS_Store
+
+# pytest-cov
+.coverage
+htmlcov/
