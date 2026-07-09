@@ -1,6 +1,7 @@
 """Tests for extractor/builtin.py - the allowlist-based JSON extraction."""
 
 from ephemera.extractor.builtin import extract_from_json_body
+from ephemera.extractor.jwt_claims import extract_jwt_claims, looks_like_jwt
 
 
 def test_extracts_top_level_allowlisted_key():
@@ -61,3 +62,50 @@ def test_handles_invalid_json_gracefully():
 def test_handles_empty_body():
     results = extract_from_json_body(b"")
     assert results == []
+
+
+# ── JWT claim extractor ──────────────────────────────────────────────────────
+
+import base64
+import json as _json
+
+
+def _make_jwt(payload: dict) -> str:
+    def b64(data: bytes) -> str:
+        return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+    header = b64(_json.dumps({"alg": "none", "typ": "JWT"}).encode())
+    body = b64(_json.dumps(payload).encode())
+    return f"{header}.{body}."
+
+
+def test_looks_like_jwt():
+    token = _make_jwt({"role": "admin", "exp": 9999999999})
+    assert looks_like_jwt(token)
+    assert not looks_like_jwt("not-a-jwt")
+    assert not looks_like_jwt("abc.def")
+
+
+def test_extract_jwt_claims_allowlisted():
+    token = _make_jwt({"role": "admin", "exp": 9999999999, "noise": "x"})
+    results = extract_jwt_claims(token, parent_key="token")
+    by_key = {r.key: r for r in results}
+    assert "token.role" in by_key
+    assert by_key["token.role"].value == "admin"
+    assert by_key["token.role"].variable_type == "jwt_claim"
+    assert "token.exp" in by_key
+    assert "token.noise" not in by_key
+
+
+def test_json_body_also_emits_jwt_claims():
+    token = _make_jwt({"role": "user", "sub": "42"})
+    body = _json.dumps({"token": token}).encode()
+    results = extract_from_json_body(body)
+    types = {r.variable_type for r in results}
+    assert "json_body_key" in types
+    assert "jwt_claim" in types
+    keys = {r.key for r in results}
+    assert "token" in keys
+    assert "token.role" in keys
+    assert "token.sub" in keys
+
