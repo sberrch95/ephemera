@@ -1,6 +1,7 @@
 """Tests for extractor/builtin.py - the allowlist-based JSON extraction."""
 
 from ephemera.extractor.builtin import extract_from_json_body
+from ephemera.extractor.cookies import extract_from_set_cookie
 
 
 def test_extracts_top_level_allowlisted_key():
@@ -61,3 +62,39 @@ def test_handles_invalid_json_gracefully():
 def test_handles_empty_body():
     results = extract_from_json_body(b"")
     assert results == []
+
+
+# ── cookie extractor ─────────────────────────────────────────────────────────
+
+
+def test_cookie_extractor_allowlisted_set_cookie():
+    results = extract_from_set_cookie("session=abc123; Path=/; HttpOnly")
+    assert len(results) == 1
+    assert results[0].key == "session"
+    assert results[0].value == "abc123"
+    assert results[0].variable_type == "cookie"
+
+
+def test_cookie_extractor_ignores_non_allowlisted():
+    results = extract_from_set_cookie("theme=dark; Path=/")
+    assert results == []
+
+
+def test_cookie_extractor_from_header_mapping():
+    headers = {"Set-Cookie": "token=xyz; Path=/"}
+    results = extract_from_set_cookie(headers)
+    assert len(results) == 1
+    assert results[0].key == "token"
+    assert results[0].variable_type == "cookie"
+
+
+def test_cookie_extractor_multiple_headers():
+    results = extract_from_set_cookie([
+        "session=s1; Path=/",
+        "theme=dark; Path=/",
+        "csrf_token=c1; Path=/",
+    ])
+    keys = {r.key for r in results}
+    assert keys == {"session", "csrf_token"}
+    assert all(r.variable_type == "cookie" for r in results)
+

@@ -16,6 +16,7 @@ from sqlmodel import Session, select
 
 from ephemera.database.models import Endpoint, RequestLog, Target, TimelineEvent, Variable
 from ephemera.extractor.builtin import extract_from_json_body
+from ephemera.extractor.cookies import extract_from_set_cookie
 
 
 def get_or_create_target(session: Session, hostname: str) -> Target:
@@ -82,12 +83,23 @@ def record_request(
     session.commit()
 
 
-def record_extracted_variables(session: Session, url: str, response_body: bytes) -> None:
-    """Run extraction against a response body and store matches. Caller
-    provides the session, and must ensure record_request() has already
-    run for this URL so the Target row exists."""
+def record_extracted_variables(
+    session: Session,
+    url: str,
+    response_body: bytes,
+    response_headers=None,
+) -> None:
+    """Run extraction against a response and store matches.
+
+    Scans the JSON body for allowlisted keys and, when response_headers is
+    provided, Set-Cookie headers via the cookie extractor. Caller provides
+    the session and must ensure record_request() has already run for this
+    URL so the Target row exists.
+    """
     hostname = urlparse(url).netloc
-    candidates = extract_from_json_body(response_body)
+    candidates = list(extract_from_json_body(response_body))
+    if response_headers is not None:
+        candidates.extend(extract_from_set_cookie(response_headers))
 
     if not candidates:
         return
@@ -107,7 +119,7 @@ def record_extracted_variables(session: Session, url: str, response_body: bytes)
         session.add(TimelineEvent(
             target_id=target.id,
             event_type="VARIABLE_EXTRACTED",
-            description=f"Extracted '{candidate.key}' from {url}",
+            description=f"Extracted '{candidate.key}' ({candidate.variable_type}) from {url}",
         ))
 
     session.commit()
