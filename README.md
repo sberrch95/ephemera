@@ -77,4 +77,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT
+Licensed under the Apache License 2.0.
