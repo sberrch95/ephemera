@@ -9,6 +9,7 @@ like" a token.
 import json
 
 from ephemera.extractor.base import Candidate
+from ephemera.extractor.jwt_claims import extract_jwt_claims, looks_like_jwt
 
 # Explicit allowlist. Add to this list deliberately - each addition is a
 # judgment call about what's worth remembering, not a heuristic guess.
@@ -27,7 +28,11 @@ JSON_KEY_ALLOWLIST = {
 
 
 def extract_from_json_body(body_bytes: bytes) -> list[Candidate]:
-    """Recursively scan a JSON response body for allowlisted keys."""
+    """Recursively scan a JSON response body for allowlisted keys.
+
+    When a matched value looks like a JWT, also decode its payload and emit
+    individual ``jwt_claim`` candidates for allowlisted claims.
+    """
     try:
         data = json.loads(body_bytes)
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -45,6 +50,8 @@ def _scan(node, candidates: list[Candidate]) -> None:
         for key, value in node.items():
             if key in JSON_KEY_ALLOWLIST and isinstance(value, str):
                 candidates.append(Candidate(key=key, value=value, variable_type="json_body_key"))
+                if looks_like_jwt(value):
+                    candidates.extend(extract_jwt_claims(value, parent_key=key))
             else:
                 _scan(value, candidates)
     elif isinstance(node, list):
