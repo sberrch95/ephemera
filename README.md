@@ -1,80 +1,161 @@
 # Ephemera
 
-A security context engine: shared memory between pentesting tools.
+> **The Operating System for Offensive Security Workflows.**
 
-Modern security tools work in isolation — Burp, ffuf, and custom scripts
-each discover things (endpoints, tokens, session state) without sharing
-that knowledge with each other. Ephemera sits between your tools and a
-target as an HTTP(S) proxy, automatically remembering what's discovered
-so it doesn't get lost between tools or lost when you close a terminal.
+Imagine a penetration test where every security tool shares the same brain.
 
-**Status: working foundation (v0.1.0).** Core pipeline is functional and
-tested. Not yet a v1.0 - see [Roadmap](#roadmap) below.
+Nmap discovers open services.
 
-Ephemera does **not** automate exploitation and does **not** attack
-targets. It's a memory layer for traffic you're already generating with
-your own tools, against targets you're authorized to test.
+ffuf finds hidden endpoints.
 
-## What it does today
+Gobuster maps directories.
 
-- **Intercepts HTTP(S) traffic** via a local proxy (built on
-  [mitmproxy](https://mitmproxy.org)) - point your tools at it like any
-  other proxy
-- **Remembers targets and endpoints** automatically, deduplicated, with
-  a timeline of what was discovered and when
-- **Extracts security-relevant values** (tokens, session IDs) from JSON
-  response bodies using an explicit, auditable key allowlist - no
-  heuristic guessing
-- **Exports** everything captured for a target as JSON or Markdown
+Nikto fingerprints technologies.
 
-## Quickstart
+Burp captures authentication.
 
-```bash
-git clone https://github.com/sberrch95/ephemera.git
-cd ephemera
-uv venv
-source .venv/bin/activate
-uv pip install -e ".[dev]"
+Your Python scripts generate custom findings.
 
-ephemera start
-```
+Future AI agents reason over everything.
 
-In another terminal, point a tool at the proxy:
+Instead of every tool working in isolation, **all discoveries become part of one continuously growing security knowledge graph.**
 
-```bash
-curl -x http://localhost:8888 --cacert ~/.mitmproxy/mitmproxy-ca-cert.pem https://example.com
-```
+No copy-paste.
 
-(The `--cacert` flag is required for HTTPS traffic - mitmproxy generates
-its own CA certificate on first run, and your client needs to trust it
-to allow interception. This is the same trust model tools like Burp use.)
+No forgotten tokens.
 
-Then check what Ephemera learned:
+No repeated enumeration.
 
-```bash
-ephemera state
-ephemera history
-ephemera export <hostname>
-```
+No rebuilding context.
 
-## Development
+One memory.
 
-```bash
-pytest -v                    # run tests (29 passing, ~95% coverage on core logic)
-ruff check src/ tests/       # lint
-```
+One workflow.
 
-## Roadmap
+One source of truth.
 
-- [ ] Cookie and JWT-claim extractors (beyond today's JSON-body-key extractor)
-- [ ] Variable injection (`{{TOKEN}}` templating in outgoing requests)
-- [ ] `ephemera --daemon` mode (currently runs in the foreground)
-- [ ] Multi-target export / reporting
+---
 
-## Contributing
+# The Vision
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+Ephemera is building a **Security Context Engine**.
 
-## License
+Rather than creating another scanner, proxy, or exploitation framework, Ephemera acts as the intelligence layer between existing security tools.
+
+Its long-term goal is to become the missing infrastructure that allows the entire offensive security ecosystem to collaborate automatically.
+
+Future versions aim to support:
+
+- Shared memory between dozens of security tools
+- Automatic context synchronization
+- Token and session lifecycle management
+- Endpoint intelligence
+- Technology fingerprint sharing
+- Attack timeline reconstruction
+- Plugin ecosystem
+- AI-assisted offensive workflows
+- Team collaboration
+- Distributed context sharing
+- Intelligent automation powered by accumulated knowledge
+
+The objective is simple:
+
+> **Run your tools. Ephemera remembers everything.**
+
+---
+
+# Foundation (v0.1.0)
+
+Every large system starts with a small, reliable core.
+
+Version **0.1.0** is the first working foundation that proves the architecture.
+
+Current capabilities include:
+
+- HTTP(S) interception using mitmproxy
+- Persistent SQLite memory
+- Automatic endpoint discovery
+- Security timeline engine
+- JSON token extraction
+- Target-scoped storage
+- JSON & Markdown export
+- Automated testing with high core coverage
+
+While intentionally small, this version validates the central idea:
+
+**Security tools no longer need to work alone.**
+
+---
+
+# Why This Matters
+
+Today's penetration testing workflow is fragmented.
+
+Every tool discovers valuable information but keeps that information to itself.
+
+Security professionals constantly switch between terminals, Burp projects, screenshots, notes, browser tabs, and scripts while manually moving context from one place to another.
+
+Ephemera removes that friction by becoming the shared memory layer for the entire assessment.
+
+---
+
+# Roadmap
+
+## v0.2
+- Native support for common security tools
+- Context synchronization
+- Variable injection
+- Cookie extraction
+- JWT claim extraction
+- Better reporting
+- Improved CLI
+
+## v0.5
+- Plugin SDK
+- Advanced extraction engine
+- Cross-tool workflows
+- Rich reporting
+- Workflow automation
+
+## v1.0
+- Complete Security Context Engine
+- Broad offensive security ecosystem support
+- AI-assisted workflows
+- Team collaboration
+- Enterprise-ready architecture
+
+---
+
+# Contributing
+
+Ephemera is an open-source project built in public.
+
+Whether you're a:
+
+- Penetration Tester
+- Security Researcher
+- Blue Team Engineer
+- Python Developer
+- Rust Developer
+- Student
+- Open Source Contributor
+
+your ideas, discussions, bug reports, documentation improvements, and pull requests are all welcome.
+
+We're not just building another security tool.
+
+We're building the missing layer that connects them all.
+
+---
+
+# Responsible Use
+
+Ephemera is intended exclusively for authorized security testing and research.
+
+It does not automate exploitation and should only be used on systems you are authorized to assess.
+
+---
+
+# License
 
 Licensed under the Apache License 2.0.
