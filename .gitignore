@@ -1,4 +1,3 @@
-# Python
 __pycache__/
 *.pyc
 .venv/
@@ -6,26 +5,20 @@ __pycache__/
 dist/
 build/
 
-# uv
 .python-version
 
-# Ephemera runtime data — never commit captured traffic or local DB
 *.db
 *.sqlite
 *.sqlite3
 ephemera_data/
 
-# mitmproxy
 .mitmproxy/
 
-# Editor
 .vscode/
 .idea/
 *.swp
 
-# OS
 .DS_Store
 
-# pytest-cov
 .coverage
 htmlcov/
