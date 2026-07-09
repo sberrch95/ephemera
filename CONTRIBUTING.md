@@ -24,13 +24,13 @@ Both should pass cleanly on a fresh clone. If they don't, that's a bug
 in the setup instructions - please open an issue.
 
 ## Project Structure
-src/ephemera/
+```src/ephemera/
 ├── proxy/       # mitmproxy addon - traffic interception, no business logic
 ├── core/        # memory.py - the scoping/deduplication/storage logic
 ├── database/    # SQLModel table definitions and session management
 ├── extractor/   # pluggable extractors (currently: JSON body key allowlist)
 └── cli/         # Typer commands - thin layer over core/ and database/
-
+```
 **Key design principle:** functions in `core/` and `database/` accept a
 `session` parameter rather than opening their own database connection
 internally. This was a deliberate fix (see commit history) - it's what
