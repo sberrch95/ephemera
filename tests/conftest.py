@@ -1,7 +1,3 @@
-"""Shared pytest fixtures. conftest.py is auto-discovered by pytest -
-anything defined here is available to every test file without importing.
-"""
-
 import pytest
 from sqlmodel import Session, SQLModel, create_engine
 
