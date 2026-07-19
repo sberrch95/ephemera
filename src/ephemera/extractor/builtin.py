@@ -7,6 +7,8 @@ like" a token.
 """
 
 import json
+from http.cookies import SimpleCookie
+from collections.abc import Mapping
 
 from ephemera.extractor.base import Candidate
 
@@ -36,6 +38,42 @@ def extract_from_json_body(body_bytes: bytes) -> list[Candidate]:
     candidates: list[Candidate] = []
     _scan(data, candidates)
     return candidates
+
+
+def extract_from_response_headers(headers) -> list[Candidate]:
+    """Extract cookies from ``Set-Cookie`` response headers.
+
+    Header names are matched case-insensitively, and each header value is
+    parsed independently so one malformed cookie cannot hide valid cookies
+    in other response headers.
+    """
+    values = _set_cookie_values(headers)
+    candidates: list[Candidate] = []
+    for raw_value in values:
+        cookie = SimpleCookie()
+        try:
+            cookie.load(str(raw_value))
+        except (TypeError, ValueError):
+            continue
+        for key, morsel in cookie.items():
+            candidates.append(Candidate(key=key, value=morsel.value, variable_type="cookie"))
+    return candidates
+
+
+def _set_cookie_values(headers) -> list[str]:
+    """Return Set-Cookie values from mapping- or mitmproxy-like headers."""
+    if headers is None:
+        return []
+    if hasattr(headers, "get_all"):
+        return [str(value) for value in headers.get_all("set-cookie")]
+    if isinstance(headers, Mapping):
+        values = []
+        for key, value in headers.items():
+            if str(key).lower() != "set-cookie":
+                continue
+            values.extend(value if isinstance(value, (list, tuple)) else [value])
+        return [str(value) for value in values]
+    return []
 
 
 def _scan(node, candidates: list[Candidate]) -> None:

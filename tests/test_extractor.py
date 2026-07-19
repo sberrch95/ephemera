@@ -1,6 +1,6 @@
 """Tests for extractor/builtin.py - the allowlist-based JSON extraction."""
 
-from ephemera.extractor.builtin import extract_from_json_body
+from ephemera.extractor.builtin import extract_from_json_body, extract_from_response_headers
 
 
 def test_extracts_top_level_allowlisted_key():
@@ -61,3 +61,24 @@ def test_handles_invalid_json_gracefully():
 def test_handles_empty_body():
     results = extract_from_json_body(b"")
     assert results == []
+
+
+def test_extracts_cookies_from_set_cookie_headers():
+    results = extract_from_response_headers({
+        "Set-Cookie": ["session=abc123; Path=/; HttpOnly", "theme=dark; Secure"],
+        "Content-Type": "text/plain",
+    })
+
+    assert [(result.key, result.value, result.variable_type) for result in results] == [
+        ("session", "abc123", "cookie"),
+        ("theme", "dark", "cookie"),
+    ]
+
+
+def test_cookie_extraction_ignores_non_cookie_headers_and_bad_values():
+    results = extract_from_response_headers({
+        "x-session": "not-a-cookie",
+        "set-cookie": ["not a cookie", "valid=yes; Path=/"],
+    })
+
+    assert [(result.key, result.value) for result in results] == [("valid", "yes")]

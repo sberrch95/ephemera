@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 from sqlmodel import Session, select
 
 from ephemera.database.models import Endpoint, RequestLog, Target, TimelineEvent, Variable
-from ephemera.extractor.builtin import extract_from_json_body
+from ephemera.extractor.builtin import extract_from_json_body, extract_from_response_headers
 
 
 def get_or_create_target(session: Session, hostname: str) -> Target:
@@ -82,12 +82,15 @@ def record_request(
     session.commit()
 
 
-def record_extracted_variables(session: Session, url: str, response_body: bytes) -> None:
+def record_extracted_variables(
+    session: Session, url: str, response_body: bytes = b"", response_headers=None
+) -> None:
     """Run extraction against a response body and store matches. Caller
     provides the session, and must ensure record_request() has already
     run for this URL so the Target row exists."""
     hostname = urlparse(url).netloc
     candidates = extract_from_json_body(response_body)
+    candidates.extend(extract_from_response_headers(response_headers))
 
     if not candidates:
         return

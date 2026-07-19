@@ -34,7 +34,10 @@ class EphemeraAddon:
             )
             if content:
                 record_extracted_variables(
-                    session=session, url=flow.request.pretty_url, response_body=content
+                    session=session,
+                    url=flow.request.pretty_url,
+                    response_body=content,
+                    response_headers=flow.response.headers,
                 )
 
 
