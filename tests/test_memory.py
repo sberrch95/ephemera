@@ -127,6 +127,25 @@ def test_record_extracted_variables_ignores_non_allowlisted_keys(session):
     assert len(session.exec(select(Variable)).all()) == 0
 
 
+def test_record_extracted_variables_stores_cookie_without_response_body(session):
+    record_request(
+        session, url="http://example.com/login", method="POST",
+        status_code=204, response_bytes=0,
+    )
+    record_extracted_variables(
+        session,
+        url="http://example.com/login",
+        response_body=b"",
+        response_headers={"Set-Cookie": "session=abc123; Path=/; HttpOnly"},
+    )
+
+    variables = session.exec(select(Variable)).all()
+    assert len(variables) == 1
+    assert variables[0].key == "session"
+    assert variables[0].value == "abc123"
+    assert variables[0].variable_type == "cookie"
+
+
 def test_record_extracted_variables_does_nothing_if_target_missing(session):
     # no record_request() called first - target doesn't exist yet
     body = b'{"token": "abc123"}'
